@@ -6,11 +6,13 @@ import argparse
 import select
 import logs.configs.server_config
 import socket
+import threading
 from commons import *
 from decorators import LogFunctions
 from metaclasses import ServerVerifier
 from descriptors import Port
 from utils import get_message, send_message
+from server_db import ServerWarehouse
 
 logger = logging.getLogger("server")
 
@@ -26,10 +28,10 @@ def parse_args_for_tcp_server():
     return server_args_namespace.host, server_args_namespace.port, server_args_namespace.timeout
 
 
-class Server(metaclass=ServerVerifier):
+class Server(threading.Thread, metaclass=ServerVerifier):
     port = Port()
 
-    def __init__(self, host, port, timeout):
+    def __init__(self, host, port, timeout, database):
 
         self.addr = host
         self.port = port
@@ -38,6 +40,10 @@ class Server(metaclass=ServerVerifier):
         self.clients = []
         self.messages = []
         self.names = dict()
+
+        self.database = database
+
+        super().__init__()
 
     def init_socket(self):
         logger.info(f"Start server with params: {self.addr}, {self.port}")
@@ -49,7 +55,7 @@ class Server(metaclass=ServerVerifier):
         self.sock = transport
         self.sock.listen(MAX_CONNECTIONS)
 
-    def main_loop(self):
+    def run(self):
         self.init_socket()
 
         while True:
@@ -100,6 +106,8 @@ class Server(metaclass=ServerVerifier):
         if ACTION in message and message[ACTION] == PRESENCE and TIME in message and USER in message:
             if message[USER][ACCOUNT_NAME] not in self.names.keys():
                 self.names[message[USER][ACCOUNT_NAME]] = client
+                client_host, client_port = client.getpeername()
+                self.database.user_login(message[USER][ACCOUNT_NAME], client_host, client_port)
                 send_message(client, RESPONSE_200)
             else:
                 response = RESPONSE_400
@@ -113,6 +121,7 @@ class Server(metaclass=ServerVerifier):
             self.messages.append(message)
             return
         elif ACTION in message and message[ACTION] == EXIT and ACCOUNT_NAME in message:
+            self.database.user_logout(message[ACCOUNT_NAME])
             self.clients.remove(self.names[ACCOUNT_NAME])
             self.names[ACCOUNT_NAME].close()
             del self.names[ACCOUNT_NAME]
@@ -126,9 +135,18 @@ class Server(metaclass=ServerVerifier):
 
 @LogFunctions()
 def run_server():
-        host, port, timeout = parse_args_for_tcp_server()
-        my_server = Server(host, port, timeout)
-        my_server.main_loop()
+    host, port, timeout = parse_args_for_tcp_server()
+    database = ServerWarehouse()
+    my_server = Server(host, port, timeout, database)
+    my_server.daemon = True
+    my_server.start()
+    print("For stop server input 'exit'")
+    while True:
+        command = input("Input command: ")
+        if command == 'exit':
+            break
+        else:
+            print("The functionality is being finalized. For stor server input 'exit'")
 
 
 if __name__ == "__main__":
