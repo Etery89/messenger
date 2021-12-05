@@ -96,3 +96,25 @@ class ServerWarehouse:
 
         self.session.commit()
 
+    def get_users(self):
+        query = self.session.query(self.Users.name, self.Users.last_login)
+        return query.all()
+
+    def get_active_users(self):
+        query = self.session.query(
+            self.Users.name,
+            self.UsersActive.host,
+            self.UsersActive.port,
+            self.UsersActive.time_login
+        ).join(self.Users)
+        return query.all()
+
+    def get_history(self):
+        query = self.session.query(
+            self.Users.name,
+            self.UsersHistory.host,
+            self.UsersHistory.port,
+            self.UsersHistory.date_time
+        ).join(self.Users)
+        return query.all()
+

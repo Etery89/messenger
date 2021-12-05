@@ -133,6 +133,14 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             return
 
 
+def get_help():
+    print("For stop server input 'exit', 'help' - for get list commands.")
+    print("Query command:")
+    print("users - get list all users are registered in server;")
+    print("active - get list active users in server now;")
+    print("history - get history connections in server.")
+
+
 @LogFunctions()
 def run_server():
     host, port, timeout = parse_args_for_tcp_server()
@@ -140,13 +148,24 @@ def run_server():
     my_server = Server(host, port, timeout, database)
     my_server.daemon = True
     my_server.start()
-    print("For stop server input 'exit'")
+    get_help()
     while True:
         command = input("Input command: ")
         if command == 'exit':
             break
+        elif command == "users":
+            users = database.get_users()
+            print(users)
+        elif command == "active":
+            active_users = database.get_active_users()
+            print(active_users)
+        elif command == "history":
+            users_history = database.get_history()
+            print(users_history)
+        elif command == "help":
+            get_help()
         else:
-            print("The functionality is being finalized. For stor server input 'exit'")
+            print("This command not in list commands. For get help input - 'help'.")
 
 
 if __name__ == "__main__":
