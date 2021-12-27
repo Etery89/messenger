@@ -1,7 +1,29 @@
 import sys
 import os
+import time
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QAction, QApplication, QLabel, QTableView, QDialog, QLineEdit, \
     QFileDialog
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+
+
+def create_model(database_obj):
+    users = database_obj.get_active_users()
+    table = QStandardItemModel()
+    headers = ['Имя Клиента', 'IP Адрес', 'Порт', 'Время подключения']
+    table.setHorizontalHeaderLabels(headers)
+    for row in users:
+        user, host, port, time_login = row
+        user = QStandardItem(user)
+        user.setEditable(False)
+        host = QStandardItem(host)
+        host.setEditable(False)
+        port = QStandardItem(port)
+        port.setEditable(False)
+        time_login = QStandardItem(str(time_login))
+        time_login.setEditable(False)
+        table.appendRow([user, host, port, time_login])
+    return table
+
 
 
 class MainWindow(QMainWindow):
@@ -136,9 +158,17 @@ class ConfigWindow(QDialog):
 
 if __name__ == "__main__":
     my_app = QApplication(sys.argv)
-    # win = MainWindow()
+    win = MainWindow()
+    test_list = QStandardItemModel(win)
+    test_list.setHorizontalHeaderLabels(['Имя Клиента', 'IP Адрес', 'Порт', 'Время подключения'])
+    time_ = time.strftime("%H:%M:%S", time.localtime(time.time()))
+    test_list.appendRow([QStandardItem('1'), QStandardItem('2'), QStandardItem('3'), QStandardItem(str(time_))])
+    test_list.appendRow([QStandardItem('4'), QStandardItem('5'), QStandardItem('6'), QStandardItem(str(time_))])
+
+    win.clients_table.setModel(test_list)
+    win.clients_table.resizeColumnsToContents()
     # his = HistoryWindow()
-    config = ConfigWindow()
+    # config = ConfigWindow()
     my_app.exec_()
 
 
