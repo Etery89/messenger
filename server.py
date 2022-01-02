@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import time
 import logging
@@ -7,21 +8,30 @@ import select
 import logs.configs.server_config
 import socket
 import threading
+import configparser
 from commons import *
 from decorators import LogFunctions
 from metaclasses import ServerVerifier
 from descriptors import Port
 from utils import get_message, send_message
 from server_db import ServerWarehouse
+from server_gui import MainWindow, HistoryWindow, ConfigWindow, create_users_model, create_history_model
+from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import QTimer
 
 logger = logging.getLogger("server")
 
+# lock for db
+new_connection = False
+conflag_lock = threading.Lock()
+
 
 @LogFunctions()
-def parse_args_for_tcp_server():
+def parse_args_for_tcp_server(default_host, default_port):
     parser = argparse.ArgumentParser(description="Run tcp server")
-    parser.add_argument("--host", default=DEFAULT_HOST, type=str, help="Server ip-address")
-    parser.add_argument("--port", default=DEFAULT_PORT, type=int, help="Server port number")
+    parser.add_argument("--host", default=default_host, type=str, help="Server ip-address")
+    parser.add_argument("--port", default=default_port, type=int, help="Server port number")
     parser.add_argument("-t", "--timeout", default=DEFAULT_TIMEOUT, type=float, help="Timeout for new \
     connection, type may be int or float")
     server_args_namespace = parser.parse_args()
@@ -81,6 +91,10 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                         self.process_client_message(get_message(client_with_message), client_with_message)
                     except:
                         logger.info(f'Client {client_with_message.getpeername()} disconnected.')
+                        for name in self.names:
+                            if self.names[name] == client_with_message:
+                                self.database.user_logout(name)
+                                del self.names[name]
                         self.clients.remove(client_with_message)
             for message in self.messages:
                 try:
@@ -88,6 +102,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 except:
                     logger.info(f'Loose connection with client {message[DESTINATION]}')
                     self.clients.remove(self.names[message[DESTINATION]])
+                    self.database.user_logout(message[DESTINATION])
                     del self.names[message[DESTINATION]]
             self.messages.clear()
 
@@ -102,6 +117,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 f'User {message[DESTINATION]} not registered in server, can not send message.')
 
     def process_client_message(self, message, client):
+        global new_connection
         logger.debug(f'Parse message from client : {message}')
         if ACTION in message and message[ACTION] == PRESENCE and TIME in message and USER in message:
             if message[USER][ACCOUNT_NAME] not in self.names.keys():
@@ -109,6 +125,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 client_host, client_port = client.getpeername()
                 self.database.user_login(message[USER][ACCOUNT_NAME], client_host, client_port)
                 send_message(client, RESPONSE_200)
+                with conflag_lock:
+                    new_connection = True
             else:
                 response = RESPONSE_400
                 response[ERROR] = 'Еhe username has already been taken.'
@@ -116,16 +134,44 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 self.clients.remove(client)
                 client.close()
             return
+
         elif ACTION in message and message[ACTION] == MESSAGE and DESTINATION in message and TIME in message \
                 and SENDER in message and MESSAGE_TEXT in message:
             self.messages.append(message)
+            self.database.fix_user_message(message[SENDER], message[DESTINATION])
             return
+
         elif ACTION in message and message[ACTION] == EXIT and ACCOUNT_NAME in message:
             self.database.user_logout(message[ACCOUNT_NAME])
             self.clients.remove(self.names[ACCOUNT_NAME])
             self.names[ACCOUNT_NAME].close()
             del self.names[ACCOUNT_NAME]
+            with conflag_lock:
+                new_connection = True
             return
+
+        elif ACTION in message and message[ACTION] == GET_CONTACTS and USER in message and \
+                self.names[message[USER]] == client:
+            response = RESPONSE_202
+            response[LIST_INFO] = self.database.get_contacts(message[USER])
+            send_message(client, response)
+
+        elif ACTION in message and message[ACTION] == ADD_CONTACT and ACCOUNT_NAME in message and USER in message \
+                and self.names[message[USER]] == client:
+            self.database.add_contact(message[USER], message[ACCOUNT_NAME])
+            send_message(client, RESPONSE_200)
+
+        elif ACTION in message and message[ACTION] == REMOVE_CONTACT and ACCOUNT_NAME in message and USER in message \
+                and self.names[message[USER]] == client:
+            self.database.remove_contact(message[USER], message[ACCOUNT_NAME])
+            send_message(client, RESPONSE_200)
+
+        elif ACTION in message and message[ACTION] == USERS_REQUEST and ACCOUNT_NAME in message \
+                and self.names[message[ACCOUNT_NAME]] == client:
+            response = RESPONSE_202
+            response[LIST_INFO] = [user[0] for user in self.database.users_list()]
+            send_message(client, response)
+
         else:
             response = RESPONSE_400
             response[ERROR] = 'Incorrect response.'
@@ -133,39 +179,92 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             return
 
 
-def get_help():
-    print("For stop server input 'exit', 'help' - for get list commands.")
-    print("Query command:")
-    print("users - get list all users are registered in server;")
-    print("active - get list active users in server now;")
-    print("history - get history connections in server.")
-
-
 @LogFunctions()
 def run_server():
-    host, port, timeout = parse_args_for_tcp_server()
-    database = ServerWarehouse()
+    config = configparser.ConfigParser()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    config.read(f"{dir_path}/{'server.ini'}")
+
+    host, port, timeout = parse_args_for_tcp_server(config['SETTINGS']['default_host'], config['SETTINGS']['default_port'])
+
+    database = ServerWarehouse(os.path.join(
+            config['SETTINGS']['Database_path'],
+            config['SETTINGS']['Database_file']))
+
     my_server = Server(host, port, timeout, database)
     my_server.daemon = True
     my_server.start()
-    get_help()
-    while True:
-        command = input("Input command: ")
-        if command == 'exit':
-            break
-        elif command == "users":
-            users = database.get_users()
-            print(users)
-        elif command == "active":
-            active_users = database.get_active_users()
-            print(active_users)
-        elif command == "history":
-            users_history = database.get_history()
-            print(users_history)
-        elif command == "help":
-            get_help()
+
+    server_app = QApplication(sys.argv)
+    main_window = MainWindow()
+
+    main_window.statusBar().showMessage('Server Working')
+    main_window.clients_table.setModel(create_users_model(database))
+    main_window.clients_table.resizeColumnsToContents()
+    main_window.clients_table.resizeRowsToContents()
+
+    def list_update():
+        global new_connection
+        if new_connection:
+            main_window.clients_table.setModel(
+                create_users_model(database))
+            main_window.clients_table.resizeColumnsToContents()
+            main_window.clients_table.resizeRowsToContents()
+            with conflag_lock:
+                new_connection = False
+
+    def show_statistics():
+        global stat_window
+        stat_window = HistoryWindow()
+        stat_window.history_table.setModel(create_history_model(database))
+        stat_window.history_table.resizeColumnsToContents()
+        stat_window.history_table.resizeRowsToContents()
+        stat_window.show()
+
+    # config server
+    def server_config():
+        global config_window
+        config_window = ConfigWindow()
+        config_window.db_path.insert(config['SETTINGS']['database_path'])
+        config_window.db_file.insert(config['SETTINGS']['database_file'])
+        config_window.port.insert(config['SETTINGS']['default_port'])
+        config_window.ip.insert(config['SETTINGS']['default_host'])
+        config_window.save_btn.clicked.connect(save_server_config)
+
+    def save_server_config():
+        global config_window
+        message = QMessageBox()
+        config['SETTINGS']['database_path'] = config_window.db_path.text()
+        config['SETTINGS']['database_file'] = config_window.db_file.text()
+        try:
+            port = int(config_window.port.text())
+        except ValueError:
+            message.warning(config_window, 'Ошибка', 'Порт должен быть числом')
         else:
-            print("This command not in list commands. For get help input - 'help'.")
+            config['SETTINGS']['default_host'] = config_window.ip.text()
+            if 1023 < port < 65536:
+                config['SETTINGS']['default_port'] = str(port)
+                print(port)
+                with open('server.ini', 'w') as conf:
+                    config.write(conf)
+                    message.information(
+                        config_window, 'OK', 'Настройки успешно сохранены!')
+            else:
+                message.warning(
+                    config_window,
+                    'Ошибка',
+                    'Порт должен быть от 1024 до 65536')
+
+    timer = QTimer()
+    timer.timeout.connect(list_update)
+    timer.start(1000)
+
+    main_window.refresh_button.triggered.connect(list_update)
+    main_window.history_button.triggered.connect(show_statistics)
+    main_window.config_server_button.triggered.connect(server_config)
+
+    # start app
+    server_app.exec_()
 
 
 if __name__ == "__main__":

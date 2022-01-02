@@ -200,11 +200,11 @@ class ServerWarehouse:
     def get_contacts(self, username):
         user = self.session.query(self.Users).filter_by(name=username).one()
 
-        # Запрашиваем список контактов пользователя
+        # get contacts
         query = self.session.query(self.UsersContacts, self.Users.name). \
             filter_by(user=user.id).join(self.Users, self.UsersContacts.contact == self.Users.id)
 
-        # Возвращаем имена пользователей
+        # return names in query
         return [contact[1] for contact in query.all()]
 
 
