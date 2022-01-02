@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QAction, QApplication, QLa
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 
-def create_model(database_obj):
+def create_users_model(database_obj):
     users = database_obj.get_active_users()
     table = QStandardItemModel()
     headers = ['Имя Клиента', 'IP Адрес', 'Порт', 'Время подключения']
@@ -24,6 +24,24 @@ def create_model(database_obj):
         table.appendRow([user, host, port, time_login])
     return table
 
+
+def create_history_model(database_obj):
+    history_messages = database_obj.get_message_history()
+    table = QStandardItemModel()
+    headers = ['Имя Клиента', 'Последний раз входил', 'Сообщений отправлено', 'Сообщений получено']
+    table.setHorizontalHeaderLabels(headers)
+    for row in history_messages:
+        user, last_login, send, recv = row
+        user = QStandardItem(user)
+        user.setEditable(False)
+        last_login = QStandardItem(str(last_login))
+        last_login.setEditable(False)
+        send = QStandardItem(send)
+        send.setEditable(False)
+        recv = QStandardItem(recv)
+        recv.setEditable(False)
+        table.appendRow([user, last_login, send, recv])
+    return table
 
 
 class MainWindow(QMainWindow):
