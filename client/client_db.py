@@ -101,6 +101,11 @@ class ClientWarehouse:
         return [(history_row.from_user, history_row.to_user, history_row.message, history_row.date)
                 for history_row in query.all()]
 
+    # def get_history(self, from_who):
+    #     query = self.session.query(self.MessageHistory).filter_by(from_who=from_who)
+    #     return [(history_row.from_who, history_row.to_user, history_row.message, history_row.date)
+    #             for history_row in query.all()]
+
     def add_users(self, users_list):
         self.session.query(self.KnownUsers).delete()
         for user in users_list:

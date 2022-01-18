@@ -2,6 +2,8 @@ import sys
 sys.path.append('../')
 import logging
 from PyQt5.QtWidgets import QMainWindow, qApp, QMessageBox
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
+from PyQt5.QtCore import Qt
 from client_main_window import Ui_MainClientWindow
 from errors import ServerError
 
@@ -19,9 +21,10 @@ class ClientMainWindow(QMainWindow):
 
         self.ui.menu_exit.triggered.connect(qApp.exit)
         self.ui.btn_send.clicked.connect(self.send_message)
-
+        self.ui.btn_add_contact.clicked.connect(self.add_contact_window)
 
         self.current_chat = None
+        self.history_model = None
 
         self.messages = QMessageBox()
 
@@ -48,6 +51,36 @@ class ClientMainWindow(QMainWindow):
             self.history_list_update()
 
     def history_list_update(self):
-        pass
+        history_list = sorted(self.database.get_history(self.current_chat), key=lambda item: item[3])
+        if not self.history_model:
+            self.history_model = QStandardItemModel()
+            self.ui.list_messages.setModel(self.history_model)
+        self.history_model.clear()
+        len_history_list = len(history_list)
+        start_index = 0
+        if len_history_list > 15:
+            start_index = len_history_list - 20
+        for num_index in range(start_index, len_history_list):
+            item = history_list[num_index]
+            if item[1] == 'in':
+                message = QStandardItem(f'Входящее от {item[3].replace(microsecond=0)}:\n {item[2]}')
+                message.setEditable(False)
+                message.setBackground(QBrush(QColor(255, 213, 213)))
+                message.setTextAlignment(Qt.AlignLeft)
+                self.history_model.appendRow(message)
+            else:
+                message = QStandardItem(f'Исходящее от {item[3].replace(microsecond=0)}:\n {item[2]}')
+                message.setEditable(False)
+                message.setTextAlignment(Qt.AlignRight)
+                message.setBackground(QBrush(QColor(204, 255, 204)))
+                self.history_model.appendRow(message)
+            self.ui.list_messages.scrollToBottom()
+
+    def add_contact_window(self):
+        global select_dialog
+
+
+
+
 
 
