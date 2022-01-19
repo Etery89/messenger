@@ -6,6 +6,8 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt
 from client_main_window import Ui_MainClientWindow
 from errors import ServerError
+from add_contacts_dialog import AddContactsDialog
+from delete_contact_dialog import DeleteContactsDialog
 
 logger = logging.getLogger("client")
 
@@ -21,7 +23,11 @@ class ClientMainWindow(QMainWindow):
 
         self.ui.menu_exit.triggered.connect(qApp.exit)
         self.ui.btn_send.clicked.connect(self.send_message)
+
         self.ui.btn_add_contact.clicked.connect(self.add_contact_window)
+        self.ui.btn_remove_contact.clicked.connect(self.delete_contact_window)
+
+        self.ui.menu_add_contact.triggered.connect(self.add_contact_window)
 
         self.current_chat = None
         self.history_model = None
@@ -78,6 +84,41 @@ class ClientMainWindow(QMainWindow):
 
     def add_contact_window(self):
         global select_dialog
+        select_dialog = AddContactsDialog(self.database, self.client_transport)
+        select_dialog.btn_ok.clicked.connect(lambda: self.add_contact_action(select_dialog))
+        select_dialog.show()
+
+    def add_contact_action(self, item):
+        new_contact = item.selector.currentText()
+        self.add_contact(new_contact)
+        item.close()
+
+    def add_contact(self, contact):
+        try:
+            self.client_transport.add_contact(contact)
+        except ServerError as server_err:
+            self.messages.critical(self, "Server error", server_err.message)
+        except OSError as os_err:
+            if os_err.errno:
+                self.messages.critical(self, "Error", "Loose connection from server.")
+                self.close()
+            self.messages.critical(self, "Error", "Timeout error")
+        else:
+            self.database.add_contact(contact)
+            new_contact = QStandardItem(contact)
+            new_contact.setEditable(False)
+            self.contacts_model.appendRow(new_contact)
+            logger.info(f'Added contact {contact}')
+            self.messages.information(self, 'Success', 'Added contact.')
+
+    def delete_contact_window(self):
+        global delete_dialog
+        delete_dialog = DeleteContactsDialog(self.database)
+        delete_dialog.btn_ok.clicked.connect(lambda: self.delete_contact(delete_dialog))
+        delete_dialog.show()
+
+    def delete_contact(self, item):
+        pass
 
 
 

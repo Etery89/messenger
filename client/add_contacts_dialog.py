@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 logger = logging.getLogger("client")
 
 
-class AddContactDialog(QDialog):
+class AddContactsDialog(QDialog):
     def __init__(self, database, client_transport):
         super().__init__()
         self.database = database
@@ -15,6 +15,8 @@ class AddContactDialog(QDialog):
 
         self.setWindowTitle("Добавить контакт: ")
         self.setFixedSize(340, 120)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setModal(True)
 
         self.selector_label = QLabel('Выберите контакт для добавления:', self)
         self.selector_label.setFixedSize(250, 20)
@@ -60,5 +62,5 @@ class AddContactDialog(QDialog):
 
 if __name__ == "__main__":
     app = QApplication([])
-    add_dialog = AddContactDialog("database", "socket")
+    add_dialog = AddContactsDialog("database", "socket")
     app.exec_()
