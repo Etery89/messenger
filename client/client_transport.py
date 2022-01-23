@@ -5,6 +5,9 @@ import logging
 import json
 import threading
 import time
+import hashlib
+import hmac
+import binascii
 from PyQt5.QtCore import QObject, pyqtSignal
 from errors import ServerError
 from utils import send_message, get_message
@@ -72,15 +75,44 @@ class ClientTransport(threading.Thread, QObject):
 
         logger.debug("Established connection with server")
 
-        try:
-            with socket_lock:
-                send_message(self.transport, self.create_presence())
-                self.process_server_ans(get_message(self.transport))
-        except (OSError, json.JSONDecodeError):
-            logger.critical("Loose connection with server")
-            raise ServerError("Loose connection with server")
+        bytes_password = self.password.encode("utf-8")
+        bytes_salt = self.client_name.lower().encode("utf-8")
+        password_hash = hashlib.pbkdf2_hmac("sha512", bytes_password, bytes_salt, 10000)
+        password_hash_str = binascii.hexlify(password_hash)
+        logger.debug(f'Create rassword hash: {password_hash_str}')
 
-        logger.info("Established connection with server success")
+        pub_key = self.keys.publickey().export_key().decode('ascii')
+
+        # Authorisation
+        with socket_lock:
+            presence = {
+                ACTION: PRESENCE,
+                TIME: time.time(),
+                USER: {
+                    ACCOUNT_NAME: self.username,
+                    PUBLIC_KEY: pub_key
+                }
+            }
+            logger.debug(f"Create presence message to authorisation: {presence}")
+            try:
+                send_message(self.transport, presence)
+                answer = get_message(self.transport)
+                logger.debug(f'Server response = {answer}.')
+                if RESPONSE in answer:
+                    if answer[RESPONSE] == 400:
+                        raise ServerError(answer[ERROR])
+                    elif answer[RESPONSE] == 511:
+                        answer_data = answer[DATA]
+                        hash_to_client_answer = hmac.new(password_hash_str, answer_data.encode('utf-8'), 'MD5')
+                        digest_to_client_answer = hash_to_client_answer.digest()
+                        client_answer = RESPONSE_511
+                        client_answer[DATA] = binascii.b2a_base64(digest_to_client_answer).decode('ascii')
+                        send_message(self.transport, client_answer)
+                        self.process_server_ans(get_message(self.transport))
+            except (OSError, json.JSONDecodeError) as err:
+                logger.debug(f'Connection error.', exc_info=err)
+                raise ServerError('Loose connect from authorisation.')
+        logger.info("Authorisation success. Established connection with server success")
 
     def create_presence(self):
         out = {
