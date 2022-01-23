@@ -8,7 +8,7 @@ class UserNameDialog(QDialog):
         self.ok_pressed = False
 
         self.setWindowTitle("Hello")
-        self.setFixedSize(220, 110)
+        self.setFixedSize(220, 140)
 
         self.label = QLabel("Введите имя пользователя: ", self)
         self.label.move(10, 10)
@@ -19,12 +19,21 @@ class UserNameDialog(QDialog):
         self.client_name_line.setFixedSize(200, 20)
 
         self.ok_button = QPushButton("Начать", self)
-        self.ok_button.move(10, 70)
+        self.ok_button.move(10, 105)
         self.ok_button.clicked.connect(self.click)
 
         self.exit_button = QPushButton("Выход", self)
-        self.exit_button.move(129, 70)
+        self.exit_button.move(129, 105)
         self.exit_button.clicked.connect(qApp.exit)
+
+        self.label_passwd = QLabel('Введите пароль:', self)
+        self.label_passwd.move(10, 55)
+        self.label_passwd.setFixedSize(150, 15)
+
+        self.client_passwd = QLineEdit(self)
+        self.client_passwd.setFixedSize(200, 20)
+        self.client_passwd.move(10, 75)
+        self.client_passwd.setEchoMode(QLineEdit.Password)
 
         self.show()
 
