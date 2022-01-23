@@ -1,13 +1,15 @@
 import sys
-sys.path.append('../')
+
 import logging
 from PyQt5.QtWidgets import QMainWindow, qApp, QMessageBox
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt, pyqtSlot
-from client_main_window import Ui_MainClientWindow
+sys.path.append('../')
+from client.client_main_window_convert import Ui_MainClientWindow
 from errors import ServerError
-from add_contacts_dialog import AddContactsDialog
-from delete_contact_dialog import DeleteContactsDialog
+from client.add_contacts_dialog import AddContactsDialog
+from client.delete_contact_dialog import DeleteContactsDialog
+
 
 logger = logging.getLogger("client")
 
