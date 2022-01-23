@@ -38,7 +38,7 @@ class UserNameDialog(QDialog):
         self.show()
 
     def click(self):
-        if self.client_name_line.text():
+        if self.client_name_line.text() and self.client_passwd.text():
             self.ok_pressed = True
             qApp.exit(0)
 
