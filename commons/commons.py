@@ -16,6 +16,8 @@ USER = 'user'
 ACCOUNT_NAME = 'account_name'
 SENDER = 'from'
 DESTINATION = 'to'
+PUBLIC_KEY = 'pubkey'
+DATA = 'bin'
 
 # additional keys
 PRESENCE = 'presence'
@@ -42,3 +44,8 @@ RESPONSE_400 = {
 RESPONSE_202 = {RESPONSE: 202,
                 LIST_INFO: None
                 }
+
+RESPONSE_511 = {
+    RESPONSE: 511,
+    DATA: None
+}

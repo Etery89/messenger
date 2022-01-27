@@ -1,5 +1,6 @@
 import socket
 import sys
+
 sys.path.append("../")
 import logging
 import json
@@ -9,10 +10,9 @@ import hashlib
 import hmac
 import binascii
 from PyQt5.QtCore import QObject, pyqtSignal
-from errors import ServerError
-from utils import send_message, get_message
-from commons import *
-
+from commons.errors import ServerError
+from commons.utils import send_message, get_message
+from commons.commons import *
 
 sys.path.append("../")
 

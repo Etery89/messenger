@@ -1,11 +1,10 @@
 import sys
 import json
 from commons import *
-from errors import IncorrectDataReceivedError, NonDictInputError
-from decorators import log_function
+from commons.errors import IncorrectDataReceivedError, NonDictInputError
+from commons.decorators import log_function
 
 sys.path.append('../')
-
 
 
 @log_function

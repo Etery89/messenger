@@ -6,7 +6,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt, pyqtSlot
 sys.path.append('../')
 from client.client_main_window_convert import Ui_MainClientWindow
-from errors import ServerError
+from commons.errors import ServerError
 from client.add_contacts_dialog import AddContactsDialog
 from client.delete_contact_dialog import DeleteContactsDialog
 
