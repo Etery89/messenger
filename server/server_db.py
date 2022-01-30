@@ -209,6 +209,6 @@ class ServerWarehouse:
 
 
 if __name__ == "__main__":
-    path = "server_warehouse.db3"
+    path = "../server_warehouse.db3"
     db_test = ServerWarehouse(path)
 

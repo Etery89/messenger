@@ -4,7 +4,7 @@ from commons import *
 from commons.errors import IncorrectDataReceivedError, NonDictInputError
 from commons.decorators import log_function
 
-sys.path.append('../')
+sys.path.append('../../')
 
 
 @log_function

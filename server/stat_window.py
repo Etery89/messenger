@@ -4,9 +4,10 @@ from PyQt5.QtCore import Qt
 
 
 class StatWindow(QDialog):
-    '''
-    Класс - окно со статистикой пользователей
-    '''
+
+    """Class of the interface window displaying client statistics.
+    The class constructor takes a server database object as a positional argument.
+    """
 
     def __init__(self, database):
         super().__init__()
@@ -28,13 +29,13 @@ class StatWindow(QDialog):
         self.create_stat_model()
 
     def create_stat_model(self):
-        '''Метод реализующий заполнение таблицы статистикой сообщений.'''
-        # Список записей из базы
-        stat_list = self.database.message_history()
 
-        # Объект модели данных:
-        list = QStandardItemModel()
-        list.setHorizontalHeaderLabels(
+        """A method that generates and fills a statistics table with data from the database"""
+
+        stat_list = self.database.get_message_history()
+
+        table_list = QStandardItemModel()
+        table_list.setHorizontalHeaderLabels(
             ['Имя Клиента', 'Последний раз входил', 'Сообщений отправлено', 'Сообщений получено'])
         for row in stat_list:
             user, last_seen, sent, received = row
@@ -46,8 +47,8 @@ class StatWindow(QDialog):
             sent.setEditable(False)
             received = QStandardItem(str(received))
             received.setEditable(False)
-            list.appendRow([user, last_seen, sent, received])
-        self.stat_table.setModel(list)
+            table_list.appendRow([user, last_seen, sent, received])
+        self.stat_table.setModel(table_list)
         self.stat_table.resizeColumnsToContents()
         self.stat_table.resizeRowsToContents()
 

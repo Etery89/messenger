@@ -25,10 +25,10 @@ def parse_args_for_tcp_server(default_host, default_port):
 
     logger.debug(f"Parse arguments {sys.argv}")
     parser = argparse.ArgumentParser(description="Run tcp server")
-    parser.add_argument("-h", default=default_host, type=str, help="Server ip-address")
+    parser.add_argument("-i", default=default_host, type=str, help="Server ip-address")
     parser.add_argument("-p", default=default_port, type=int, help="Server port number")
     server_args_namespace = parser.parse_args(sys.argv[1:])
-    return server_args_namespace.h, server_args_namespace.p
+    return server_args_namespace.i, server_args_namespace.p
 
 
 @LogFunctions()
@@ -58,8 +58,11 @@ def main():
 
     config = config_load()
 
-    listen_address, listen_port = parse_args_for_tcp_server(
-        config['SETTINGS']['Default_port'], config['SETTINGS']['Listen_Address'])
+    print(type(config['SETTINGS']['Default_host']))
+    print(type(config['SETTINGS']['Default_port']))
+
+    listen_address, listen_port = parse_args_for_tcp_server(config['SETTINGS']['Default_host'],
+                                                            config['SETTINGS']['Default_port'])
 
     database = ServerWarehouse(
         os.path.join(

@@ -31,6 +31,7 @@ LIST_INFO = 'data_list'
 REMOVE_CONTACT = 'remove'
 ADD_CONTACT = 'add'
 USERS_REQUEST = 'get_users'
+PUBLIC_KEY_REQUEST = 'pubkey_need'
 
 # response dicts
 # 200 success
@@ -44,6 +45,10 @@ RESPONSE_400 = {
 RESPONSE_202 = {RESPONSE: 202,
                 LIST_INFO: None
                 }
+
+RESPONSE_205 = {
+    RESPONSE: 205
+}
 
 RESPONSE_511 = {
     RESPONSE: 511,
